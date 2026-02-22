@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockTracker — Inventory Management System</title>
+    <meta name="description"
+        content="Professional inventory management with AI reports, GST invoicing, POS billing, purchase orders, and real-time alerts.">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <!-- =============== LOGIN SCREEN =============== -->
+    <div id="loginScreen">
+        <div class="login-container">
+            <div class="login-card">
+                <div class="login-logo"><i class="bi bi-box-seam-fill"></i></div>
+                <h1>StockTracker</h1>
+                <p class="login-subtitle">Inventory Management System</p>
+
+                <!-- Sign In Form -->
+                <form id="loginForm" onsubmit="handleLogin(event)">
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="loginUser" class="form-control" placeholder="Enter your email" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="loginPass" class="form-control" placeholder="Enter password"
+                            required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">
+                        <i class="bi bi-shield-lock"></i> Sign In
+                    </button>
+                </form>
+
+                <!-- Create Account Form -->
+                <form id="registerForm" onsubmit="handleRegister(event)" style="display:none;">
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="regUser" class="form-control" placeholder="Enter your email" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="regPass" class="form-control"
+                            placeholder="Create a password (min 6 chars)" required minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label>Confirm Password</label>
+                        <input type="password" id="regPassConfirm" class="form-control"
+                            placeholder="Confirm your password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">
+                        <i class="bi bi-person-plus-fill"></i> Create Account
+                    </button>
+                </form>
+
+                <div class="login-toggle">
+                    <span id="toggleToRegister" onclick="showRegisterForm()">Don't have an account? <strong>Create
+                            one</strong></span>
+                    <span id="toggleToLogin" onclick="showLoginForm()" style="display:none;">Already have an account?
+                        <strong>Sign In</strong></span>
+                </div>
+
+                <div class="login-hint">
+                    <i class="bi bi-cloud-check"></i> Cloud-synced — access your store from any device
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- =============== APP SHELL =============== -->
+    <div id="appShell" style="display:none;">
+
+        <!-- Mobile hamburger -->
+        <button class="mobile-toggle" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
+        <div class="mobile-overlay" id="mobileOverlay" onclick="toggleSidebar()"></div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-brand">
+                    <div class="sidebar-brand-icon"><i class="bi bi-box-seam-fill"></i></div>
+                    <div class="sidebar-brand-text">
+                        <h2>StockTracker</h2>
+                    </div>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-section-label">Main</div>
+                <div class="nav-item active" data-page="dashboard" onclick="navigateTo('dashboard')">
+                    <i class="bi bi-grid-1x2-fill"></i> Dashboard
+                </div>
+                <div class="nav-item" data-page="products" onclick="navigateTo('products')">
+                    <i class="bi bi-box-seam"></i> Products
+                </div>
+                <div class="nav-item" data-page="sales" onclick="navigateTo('sales')">
+                    <i class="bi bi-receipt-cutoff"></i> Sales & Billing
+                </div>
+                <div class="nav-item" data-page="pos" onclick="openQuickPOS()">
+                    <i class="bi bi-upc-scan"></i> Quick POS
+                </div>
+
+                <div class="nav-section-label">Operations</div>
+                <div class="nav-item" data-page="purchaseOrders" onclick="navigateTo('purchaseOrders')">
+                    <i class="bi bi-cart-plus-fill"></i> Purchase Orders
+                </div>
+                <div class="nav-item" data-page="returns" onclick="navigateTo('returns')">
+                    <i class="bi bi-arrow-return-left"></i> Returns
+                </div>
+                <div class="nav-item" data-page="suppliers" onclick="navigateTo('suppliers')">
+                    <i class="bi bi-truck"></i> Suppliers
+                </div>
+                <div class="nav-item" data-page="customers" onclick="navigateTo('customers')">
+                    <i class="bi bi-people-fill"></i> Customers
+                </div>
+                <div class="nav-item" data-page="discounts" onclick="navigateTo('discounts')">
+                    <i class="bi bi-tag-fill"></i> Discounts
+                </div>
+
+                <div class="nav-section-label">Insights</div>
+                <div class="nav-item" data-page="reports" onclick="navigateTo('reports')">
+                    <i class="bi bi-graph-up-arrow"></i> Reports
+                </div>
+                <div class="nav-item" data-page="alerts" onclick="navigateTo('alerts')">
+                    <i class="bi bi-bell-fill"></i> Alerts
+                    <span class="nav-badge" id="alertsBadge" style="display:none;">0</span>
+                </div>
+                <div class="nav-item" data-page="activityLog" onclick="navigateTo('activityLog')">
+                    <i class="bi bi-journal-text"></i> Activity Log
+                </div>
+
+                <div class="nav-section-label">System</div>
+                <div class="nav-item" data-page="settings" onclick="navigateTo('settings')">
+                    <i class="bi bi-gear-fill"></i> Settings
+                </div>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="sidebar-user">
+                    <div class="sidebar-user-avatar" id="userAvatar">A</div>
+                    <div class="sidebar-user-info">
+                        <strong id="userName">Admin</strong>
+                        <small>Store Manager</small>
+                    </div>
+                    <button class="btn-icon" onclick="logout()" title="Sign Out" style="margin-left:auto;">
+                        <i class="bi bi-box-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main content area -->
+        <main class="main-content">
+
+            <!-- Global toolbar -->
+            <div class="global-toolbar">
+                <div class="global-search">
+                    <i class="bi bi-search"></i>
+                    <input type="text" id="globalSearchInput"
+                        placeholder="Search products, customers, invoices... (Ctrl+K)"
+                        oninput="globalSearch(this.value)">
+                    <div class="global-search-results" id="globalSearchResults" style="display:none;"></div>
+                </div>
+                <div class="toolbar-actions">
+                    <button class="btn-icon" onclick="toggleTheme()" title="Toggle Theme" id="themeToggleBtn">
+                        <i class="bi bi-moon-stars-fill"></i>
+                    </button>
+                    <button class="btn-icon" onclick="navigateTo('alerts')" title="Alerts" id="toolbarAlertBtn">
+                        <i class="bi bi-bell"></i>
+                        <span class="toolbar-badge" id="toolbarAlertBadge" style="display:none;"></span>
+                    </button>
+                    <button class="btn-icon" onclick="openQuickPOS()" title="Quick POS">
+                        <i class="bi bi-upc-scan"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ===== DASHBOARD PAGE ===== -->
+            <div class="page active" id="page-dashboard">
+                <div class="page-header">
+                    <h1><i class="bi bi-grid-1x2-fill"></i> Dashboard</h1>
+                    <div class="page-header-actions">
+                        <button class="btn btn-primary" onclick="navigateTo('products');openModal('addProductModal')"><i
+                                class="bi bi-plus-lg"></i> Add Product</button>
+                        <button class="btn btn-accent" onclick="openQuickPOS()"><i class="bi bi-upc-scan"></i> Quick
+                            Sale</button>
+                    </div>
+                </div>
+
+                <div class="kpi-grid" id="dashboardKPIs"></div>
+
+                <div class="charts-grid">
+                    <div class="st-card">
+                        <div class="st-card-header">
+                            <h3><i class="bi bi-bar-chart-fill"></i> Sales Overview (Last 7 Days)</h3>
+                        </div>
+                        <div class="st-card-body chart-container">
+                            <canvas id="salesChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="st-card">
+                        <div class="st-card-header">
+                            <h3><i class="bi bi-pie-chart-fill"></i> Category Distribution</h3>
+                        </div>
+                        <div class="st-card-body chart-container">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Stats Row -->
+                <div class="charts-grid" style="margin-top:20px;">
+                    <div class="st-card">
+                        <div class="st-card-header">
+                            <h3><i class="bi bi-trophy-fill"></i> Top Sellers This Week</h3>
+                        </div>
+                        <div class="st-card-body" id="dashTopSellers"></div>
+                    </div>
+                    <div class="st-card">
+                        <div class="st-card-header">
+                            <h3><i class="bi bi-lightning-charge-fill"></i> Quick Actions</h3>
+                        </div>
+                        <div class="st-card-body">
+                            <div class="quick-actions-grid">
+                                <button class="quick-action-btn" onclick="openQuickPOS()"><i
+                                        class="bi bi-upc-scan"></i><span>Quick Sale</span></button>
+                                <button class="quick-action-btn"
+                                    onclick="navigateTo('products');openModal('addProductModal')"><i
+                                        class="bi bi-plus-circle"></i><span>Add Product</span></button>
+                                <button class="quick-action-btn"
+                                    onclick="navigateTo('purchaseOrders');openModal('addPOModal')"><i
+                                        class="bi bi-cart-plus"></i><span>New PO</span></button>
+                                <button class="quick-action-btn"
+                                    onclick="navigateTo('customers');openModal('addCustomerModal')"><i
+                                        class="bi bi-person-plus"></i><span>Add Customer</span></button>
+                                <button class="quick-action-btn" onclick="exportCSV()"><i
+                                        class="bi bi-download"></i><span>Export CSV</span></button>
+                                <button class="quick-action-btn" onclick="navigateTo('reports')"><i
+                                        class="bi bi-graph-up"></i><span>View Reports</span></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="st-card" style="margin-top:20px;">
+                    <div class="st-card-header">
+                        <h3><i class="bi bi-activity"></i> Recent Activity</h3>
+                    </div>
+                    <div class="st-card-body">
+                        <ul class="activity-list" id="activityFeed"></ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== PRODUCTS PAGE ===== -->
+            <div class="page" id="page-products">
+                <div class="page-header">
+                    <h1><i class="bi bi-box-seam"></i> Products</h1>
+                    <div class="page-header-actions">
+                        <button class="btn btn-secondary" onclick="openCSVImportModal()"><i class="bi bi-upload"></i>
+                            CSV Import</button>
+                        <button class="btn btn-primary"
+                            onclick="document.getElementById('editProductId').value='';document.getElementById('productForm').reset();document.getElementById('productModalTitle').innerHTML='<i class=\'bi bi-plus-circle\'></i> Add Product';openModal('addProductModal')">
+                            <i class="bi bi-plus-lg"></i> Add Product
+                        </button>
+                    </div>
+                </div>
+                <div class="st-card">
+                    <div class="st-card-header" style="flex-wrap:wrap;gap:12px;">
+                        <div class="filter-group">
+                            <input type="text" id="productSearch" class="form-control" placeholder="Search products..."
+                                oninput="renderProducts()" style="max-width:250px;">
+                            <select id="productCategory" class="form-control" onchange="renderProducts()"
+                                style="max-width:180px;">
+                                <option value="">All Categories</option>
+                            </select>
+                            <select id="productStatus" class="form-control" onchange="renderProducts()"
+                                style="max-width:160px;">
+                                <option value="">All Status</option>
+                                <option value="low">Low Stock</option>
+                                <option value="overstock">Overstock</option>
+                                <option value="expiring">Expiring Soon</option>
+                                <option value="expired">Expired</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="st-table">
+                            <thead>
+                                <tr>
+                                    <th>SKU</th>
+                                    <th>Product</th>
+                                    <th>Category</th>
+                                    <th>Stock</th>
+                                    <th>Cost</th>
+                                    <th>Sell</th>
+                                    <th>Margin</th>
+                                    <th>GST</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productsTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="empty-state" id="noProductsMsg" style="display:none;">
+                        <i class="bi bi-inbox"></i>
+                        <h3>No products found</h3>
+                        <p>Adjust your filters or add a new product.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== SALES PAGE ===== -->
+            <div class="page" id="page-sales">
+                <div class="page-header">
+                    <h1><i class="bi bi-receipt-cutoff"></i> Sales & Billing</h1>
+                    <div class="page-header-actions">
+                        <input type="date" id="salesDateFilter" class="form-control" style="max-width:180px;">
+                        <button class="btn btn-primary" onclick="populateSaleModal();openModal('newSaleModal')"><i
+                                class="bi bi-plus-lg"></i> New Sale</button>
+                    </div>
+                </div>
+                <div class="kpi-grid" id="salesKPIs"></div>
+                <div class="st-card">
+                    <div class="table-responsive">
+                        <table class="st-table">
+                            <thead>
+                                <tr>
+                                    <th>Invoice</th>
+                                    <th>Customer</th>
+                                    <th>Items</th>
+                                    <th>Subtotal</th>
+                                    <th>GST</th>
+                                    <th>Total</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="salesTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="empty-state" id="noSalesMsg" style="display:none;">
+                        <i class="bi bi-receipt"></i>
+                        <h3>No sales yet</h3>
+                        <p>Create your first sale to start billing.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== PURCHASE ORDERS PAGE ===== -->
+            <div class="page" id="page-purchaseOrders">
+                <div class="page-header">
+                    <h1><i class="bi bi-cart-plus-fill"></i> Purchase Orders</h1>
+                    <div class="page-header-actions">
+                        <button class="btn btn-primary" onclick="openPOModal()"><i class="bi bi-plus-lg"></i> New
+                            Purchase Order</button>
+                    </div>
+                </div>
+                <div class="kpi-grid" id="poKPIs"></div>
+                <div class="st-card">
+                    <div class="table-responsive">
+                        <table class="st-table">
+                            <thead>
+                                <tr>
+                                    <th>PO Number</th>
+                                    <th>Supplier</th>
+                                    <th>Items</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                    <th>Expected</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="poTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="empty-state" id="noPOMsg" style="display:none;">
+                        <i class="bi bi-cart-x"></i>
+                        <h3>No purchase orders</h3>
+                        <p>Create a PO to restock from suppliers.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== RETURNS PAGE ===== -->
+            <div class="page" id="page-returns">
+                <div class="page-header">
+                    <h1><i class="bi bi-arrow-return-left"></i> Returns & Refunds</h1>
+                    <div class="page-header-actions">
+                        <button class="btn btn-primary" onclick="openReturnModal()"><i class="bi bi-plus-lg"></i>
+                            Process Return</button>
+                    </div>
+                </div>
+                <div class="kpi-grid" id="returnKPIs"></div>
+                <div class="st-card">
+                    <div class="table-responsive">
+                        <table class="st-table">
+                            <thead>
+                                <tr>
+                                    <th>Return #</th>
+                                    <th>Customer</th>
+                                    <th>Items</th>
+                                    <th>Reason</th>
+                                    <th>Refund</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="returnsTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="empty-state" id="noReturnsMsg" style="display:none;">
+                        <i class="bi bi-arrow-return-left"></i>
+                        <h3>No returns</h3>
+                        <p>Process a customer return here.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== SUPPLIERS PAGE ===== -->
+            <div class="page" id="page-suppliers">
+                <div class="page-header">
+                    <div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0;">
+                        <h1><i class="bi bi-truck"></i> Suppliers</h1>
+                        <input type="text" id="supplierSearch" class="form-control" placeholder="Search suppliers..."
+                            style="max-width:220px;">
+                    </div>
+                    <div class="page-header-actions">
+                        <button class="btn btn-primary" style="white-space:nowrap;"
+                            onclick="document.getElementById('editSupplierId').value='';document.getElementById('supplierForm').reset();document.getElementById('supplierModalTitle').innerHTML='<i class=\'bi bi-plus-circle\'></i> Add Supplier';openModal('addSupplierModal')">
+                            <i class="bi bi-plus-lg"></i> Add Supplier</button>
+                    </div>
+                </div>
+                <div class="st-card">
+                    <div class="table-responsive">
+                        <table class="st-table">
+                            <thead>
+                                <tr>
+                                    <th>Company</th>
+                                    <th>Contact</th>
+                                    <th>Email</th>
+                                    <th>Address</th>
+                                    <th>Rating</th>
+                                    <th>Products</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="suppliersTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="empty-state" id="noSuppliersMsg" style="display:none;">
+                        <i class="bi bi-truck"></i>
+                        <h3>No suppliers</h3>
+                        <p>Add suppliers to manage procurement.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== CUSTOMERS PAGE ===== -->
+            <div class="page" id="page-customers">
+                <div class="page-header">
+                    <div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0;">
+                        <h1><i class="bi bi-people-fill"></i> Customers</h1>
+                        <input type="text" id="customerSearch" class="form-control" placeholder="Search customers..."
+                            style="max-width:220px;">
+                    </div>
+                    <div class="page-header-actions">
+                        <button class="btn btn-primary" style="white-space:nowrap;"
+                            onclick="document.getElementById('editCustomerId').value='';document.getElementById('customerForm').reset();document.getElementById('customerModalTitle').innerHTML='<i class=\'bi bi-plus-circle\'></i> Add Customer';openModal('addCustomerModal')">
+                            <i class="bi bi-plus-lg"></i> Add Customer</button>
+                    </div>
+                </div>
+                <div id="customersGrid"></div>
+            </div>
+
+            <!-- ===== DISCOUNTS PAGE ===== -->
+            <div class="page" id="page-discounts">
+                <div class="page-header">
+                    <h1><i class="bi bi-tag-fill"></i> Discounts & Coupons</h1>
+                    <div class="page-header-actions">
+                        <button class="btn btn-primary"
+                            onclick="document.getElementById('discountForm').reset();openModal('addDiscountModal')"><i
+                                class="bi bi-plus-lg"></i> Create Coupon</button>
+                    </div>
+                </div>
+                <div class="kpi-grid" id="discountKPIs"></div>
+                <div id="discountsGrid"></div>
+            </div>
+
+            <!-- ===== REPORTS PAGE ===== -->
+            <div class="page" id="page-reports">
+                <div class="page-header">
+                    <h1><i class="bi bi-graph-up-arrow"></i> Reports</h1>
+                    <div class="page-header-actions">
+                        <input type="date" id="reportDateFrom" class="form-control" style="max-width:160px;"
+                            onchange="generateReport()">
+                        <input type="date" id="reportDateTo" class="form-control" style="max-width:160px;"
+                            onchange="generateReport()">
+                        <button class="btn btn-secondary" onclick="exportCSV()"><i class="bi bi-download"></i> Export
+                            CSV</button>
+                    </div>
+                </div>
+                <div id="aiReportContent"></div>
+                <div class="charts-grid">
+                    <div class="st-card">
+                        <div class="st-card-header">
+                            <h3><i class="bi bi-graph-up"></i> Revenue vs Cost (P&L)</h3>
+                        </div>
+                        <div class="st-card-body chart-container"><canvas id="plChart"></canvas></div>
+                    </div>
+                    <div class="st-card">
+                        <div class="st-card-header">
+                            <h3><i class="bi bi-arrow-left-right"></i> Stock Movement by Category</h3>
+                        </div>
+                        <div class="st-card-body chart-container"><canvas id="stockMovementChart"></canvas></div>
+                    </div>
+                </div>
+
+
+                <div class="st-card" style="margin-top:20px;">
+                    <div class="st-card-header">
+                        <h3><i class="bi bi-cart-check"></i> Reorder Suggestions</h3>
+                    </div>
+                    <div class="st-card-body" id="reorderSuggestions"></div>
+                </div>
+            </div>
+
+            <!-- ===== ALERTS PAGE ===== -->
+            <div class="page" id="page-alerts">
+                <div class="page-header">
+                    <h1><i class="bi bi-bell-fill"></i> Alerts & Notifications</h1>
+                </div>
+                <div id="alertsList"></div>
+                <div class="empty-state" id="noAlertsMsg" style="display:none;">
+                    <i class="bi bi-check-circle"></i>
+                    <h3>All clear!</h3>
+                    <p>No alerts at this time.</p>
+                </div>
+            </div>
+
+            <!-- ===== ACTIVITY LOG PAGE ===== -->
+            <div class="page" id="page-activityLog">
+                <div class="page-header">
+                    <h1><i class="bi bi-journal-text"></i> Activity Log</h1>
+                    <div class="page-header-actions">
+                        <select id="activityTypeFilter" class="form-control" onchange="renderActivityLog()"
+                            style="max-width:160px;">
+                            <option value="">All Types</option>
+                            <option value="sale">Sales</option>
+                            <option value="purchase">Purchases</option>
+                            <option value="return">Returns</option>
+                            <option value="adjustment">Adjustments</option>
+                            <option value="add">Product Added</option>
+                            <option value="alert">Alerts</option>
+                        </select>
+                        <input type="text" id="activitySearch" class="form-control" placeholder="Search activities..."
+                            oninput="renderActivityLog()" style="max-width:220px;">
+                    </div>
+                </div>
+                <div class="st-card">
+                    <div id="activityLogList"></div>
+                    <div class="empty-state" id="noActivityMsg" style="display:none;">
+                        <i class="bi bi-journal-text"></i>
+                        <h3>No activities</h3>
+                        <p>Activity will appear here as you use the system.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== SETTINGS PAGE ===== -->
+            <div class="page" id="page-settings">
+                <div class="page-header">
+                    <h1><i class="bi bi-gear-fill"></i> Settings</h1>
+                </div>
+                <div class="settings-grid">
+                    <div class="st-card">
+                        <div class="st-card-header">
+                            <h3><i class="bi bi-building"></i> Company Details</h3>
+                        </div>
+                        <div class="st-card-body">
+                            <div class="form-group"><label>Company Name</label><input type="text"
+                                    id="settingCompanyName" class="form-control" placeholder="Your Company Name"></div>
+                            <div class="form-group"><label>GSTIN</label><input type="text" id="settingGSTIN"
+                                    class="form-control" placeholder="22AAAAA0000A1Z5"></div>
+                            <div class="form-group"><label>Address</label><textarea id="settingAddress"
+                                    class="form-control" rows="2" placeholder="Business address"></textarea></div>
+                            <div class="form-group"><label>Phone</label><input type="text" id="settingPhone"
+                                    class="form-control" placeholder="+91 XXXXX XXXXX"></div>
+                        </div>
+                    </div>
+                    <div class="st-card">
+                        <div class="st-card-header">
+                            <h3><i class="bi bi-sliders"></i> Thresholds & Preferences</h3>
+                        </div>
+                        <div class="st-card-body">
+                            <div class="form-row">
+                                <div class="form-group"><label>Default GST Rate (%)</label><input type="number"
+                                        id="settingGSTRate" class="form-control" value="18"></div>
+                                <div class="form-group"><label>Low Stock Threshold</label><input type="number"
+                                        id="settingLowStock" class="form-control" value="10"></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Overstock Threshold</label><input type="number"
+                                        id="settingOverstock" class="form-control" value="200"></div>
+                                <div class="form-group"><label>Expiry Warning (days)</label><input type="number"
+                                        id="settingExpiryDays" class="form-control" value="30"></div>
+                            </div>
+                            <button class="btn btn-primary" onclick="saveSettingsAction()"><i
+                                    class="bi bi-check-lg"></i> Save Settings</button>
+                        </div>
+                    </div>
+                    <div class="st-card">
+                        <div class="st-card-header">
+                            <h3><i class="bi bi-database"></i> Data Management</h3>
+                        </div>
+                        <div class="st-card-body">
+                            <button class="btn btn-secondary btn-block" onclick="exportAllData()"
+                                style="margin-bottom:10px;">
+                                <i class="bi bi-download"></i> Export All Data (JSON)
+                            </button>
+                            <label class="btn btn-secondary btn-block"
+                                style="margin-bottom:10px;cursor:pointer;text-align:center;">
+                                <i class="bi bi-upload"></i> Import Data (JSON)
+                                <input type="file" accept=".json" onchange="importAllData(event)" style="display:none;">
+                            </label>
+                            <button class="btn btn-danger btn-block" onclick="resetAllData()">
+                                <i class="bi bi-trash3"></i> Reset All Data
+                            </button>
+                        </div>
+                    </div>
+                    <div class="st-card">
+                        <div class="st-card-header">
+                            <h3><i class="bi bi-keyboard"></i> Keyboard Shortcuts</h3>
+                        </div>
+                        <div class="st-card-body">
+                            <div class="shortcut-list">
+                                <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>K</kbd><span>Global Search</span></div>
+                                <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>P</kbd><span>Quick POS</span></div>
+                                <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>N</kbd><span>New Product</span></div>
+                                <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>D</kbd><span>Dashboard</span></div>
+                                <div class="shortcut-item"><kbd>Esc</kbd><span>Close Modal</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="st-card" style="margin-top:20px;border-left:4px solid var(--accent-danger);">
+                        <div class="st-card-header">
+                            <h3><i class="bi bi-box-arrow-right"></i> Session</h3>
+                        </div>
+                        <div class="st-card-body">
+                            <p style="color:var(--text-secondary);margin-bottom:12px;">Sign out of your current session.
+                            </p>
+                            <button class="btn btn-danger btn-block" onclick="logout()">
+                                <i class="bi bi-box-arrow-right"></i> Logout
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- =============== MODALS =============== -->
+
+    <!-- Add/Edit Product Modal -->
+    <div class="modal-overlay" id="addProductModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="productModalTitle"><i class="bi bi-plus-circle"></i> Add Product</h2>
+                <button class="modal-close" onclick="closeModal('addProductModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="productForm" onsubmit="event.preventDefault();saveProduct()">
+                    <input type="hidden" id="editProductId">
+                    <div class="form-row">
+                        <div class="form-group"><label>Product Name *</label><input type="text" id="pName"
+                                class="form-control" required></div>
+                        <div class="form-group"><label>SKU</label><input type="text" id="pSKU" class="form-control"
+                                placeholder="Auto-generated"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Category *</label>
+                            <select id="pCategory" class="form-control" required>
+                                <option value="">Select...</option>
+                                <option>Electronics</option>
+                                <option>Fashion</option>
+                                <option>Grocery</option>
+                                <option>Home</option>
+                                <option>Automotive</option>
+                                <option>Health</option>
+                                <option>Sports</option>
+                                <option>Stationery</option>
+                                <option>Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>Quantity *</label><input type="number" id="pQty"
+                                class="form-control" value="0" min="0" required></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Cost Price (₹)</label><input type="number" id="pCost"
+                                class="form-control" step="0.01" value="0"></div>
+                        <div class="form-group"><label>Sell Price (₹) *</label><input type="number" id="pSell"
+                                class="form-control" step="0.01" value="0" required></div>
+                        <div class="form-group"><label>GST %</label><input type="number" id="pGST" class="form-control"
+                                value="18"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Supplier</label><select id="pSupplier" class="form-control">
+                                <option value="">None</option>
+                            </select></div>
+                        <div class="form-group"><label>Expiry Date</label><input type="date" id="pExpiry"
+                                class="form-control"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Min Stock</label><input type="number" id="pMin"
+                                class="form-control" value="10"></div>
+                        <div class="form-group"><label>Max Stock</label><input type="number" id="pMax"
+                                class="form-control" value="200"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Unit</label>
+                            <select id="pUnit" class="form-control">
+                                <option>Pcs</option>
+                                <option>Kg</option>
+                                <option>Liters</option>
+                                <option>Bags</option>
+                                <option>Boxes</option>
+                                <option>Bottles</option>
+                                <option>Pairs</option>
+                                <option>Packs</option>
+                                <option>Cans</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>Warranty</label><input type="text" id="pWarranty"
+                                class="form-control" placeholder="e.g. 1 Year"></div>
+                    </div>
+                    <div class="form-group"><label>Notes</label><textarea id="pNotes" class="form-control" rows="2"
+                            placeholder="Additional notes..."></textarea></div>
+                    <button type="submit" class="btn btn-primary btn-block"><i class="bi bi-check-lg"></i> Save
+                        Product</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Sale Modal -->
+    <div class="modal-overlay" id="newSaleModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h2><i class="bi bi-receipt"></i> New Sale</h2>
+                <button class="modal-close" onclick="closeModal('newSaleModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group"><label>Customer</label><select id="saleCustomer" class="form-control">
+                            <option value="">Walk-in Customer</option>
+                        </select></div>
+                    <div class="form-group"><label>Payment Method</label>
+                        <select id="salePayment" class="form-control">
+                            <option>Cash</option>
+                            <option>UPI</option>
+                            <option>Card</option>
+                            <option>NetBanking</option>
+                            <option>Credit</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Discount Code</label><input type="text" id="saleDiscountCode"
+                            class="form-control" placeholder="e.g. WELCOME10" oninput="applySaleDiscount()"></div>
+                </div>
+                <table class="st-table" style="margin-bottom:16px;">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Qty</th>
+                            <th>Price</th>
+                            <th>GST</th>
+                            <th>Total</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="saleItemsBody"></tbody>
+                </table>
+                <button class="btn btn-secondary" onclick="addSaleItem()" style="margin-bottom:16px;"><i
+                        class="bi bi-plus"></i> Add Item</button>
+                <div style="text-align:right;">
+                    <p>Subtotal: <strong id="saleSubtotal">₹0</strong></p>
+                    <p>Discount: <strong id="saleDiscountAmount" style="color:var(--accent-success);">-₹0</strong></p>
+                    <p>GST: <strong id="saleGST">₹0</strong></p>
+                    <p style="font-size:20px;font-weight:700;">Grand Total: <span id="saleGrandTotal">₹0</span></p>
+                </div>
+                <button class="btn btn-primary btn-block" onclick="completeSale()"><i class="bi bi-check-circle"></i>
+                    Complete Sale</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice Modal -->
+    <div class="modal-overlay" id="invoiceModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h2><i class="bi bi-file-earmark-text"></i> Invoice</h2>
+                <button class="modal-close" onclick="closeModal('invoiceModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="invoiceContent"></div>
+                <!-- Mobile Success View -->
+                <div id="mobileInvoiceSuccess" class="mobile-invoice-success" style="display:none;">
+                    <div class="success-icon"><i class="bi bi-check-circle-fill"></i></div>
+                    <h3>Sale Completed!</h3>
+                    <p>Invoice generated successfully.</p>
+                    <div class="mobile-actions">
+                        <button class="btn btn-primary" onclick="printInvoice()"
+                            style="width:100%;margin-bottom:10px;padding:12px;"><i class="bi bi-printer"></i> Print
+                            Invoice</button>
+                        <button class="btn btn-secondary" onclick="closeModal('invoiceModal')"
+                            style="width:100%;padding:12px;">Close</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" id="invoiceFooter">
+                <button class="btn btn-primary" onclick="printInvoice()"><i class="bi bi-printer"></i> Print</button>
+                <button class="btn btn-secondary" onclick="closeModal('invoiceModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Supplier Modal -->
+    <div class="modal-overlay" id="addSupplierModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="supplierModalTitle"><i class="bi bi-plus-circle"></i> Add Supplier</h2>
+                <button class="modal-close" onclick="closeModal('addSupplierModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="supplierForm" onsubmit="event.preventDefault();saveSupplier()">
+                    <input type="hidden" id="editSupplierId">
+                    <div class="form-group"><label>Company Name *</label><input type="text" id="sName"
+                            class="form-control" required></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Contact Person</label><input type="text" id="sContact"
+                                class="form-control"></div>
+                        <div class="form-group"><label>Phone</label><input type="tel" id="sPhone" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-group"><label>Email</label><input type="email" id="sEmail" class="form-control">
+                    </div>
+                    <div class="form-group"><label>Address</label><textarea id="sAddress" class="form-control"
+                            rows="2"></textarea></div>
+                    <div class="form-group"><label>Rating</label>
+                        <select id="sRating" class="form-control">
+                            <option value="5">★★★★★ Excellent</option>
+                            <option value="4">★★★★☆ Good</option>
+                            <option value="3">★★★☆☆ Average</option>
+                            <option value="2">★★☆☆☆ Below Average</option>
+                            <option value="1">★☆☆☆☆ Poor</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block"><i class="bi bi-check-lg"></i> Save
+                        Supplier</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Customer Modal -->
+    <div class="modal-overlay" id="addCustomerModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="customerModalTitle"><i class="bi bi-plus-circle"></i> Add Customer</h2>
+                <button class="modal-close" onclick="closeModal('addCustomerModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="customerForm" onsubmit="event.preventDefault();saveCustomer()">
+                    <input type="hidden" id="editCustomerId">
+                    <div class="form-group"><label>Full Name *</label><input type="text" id="cName" class="form-control"
+                            required></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Phone</label><input type="tel" id="cPhone" class="form-control">
+                        </div>
+                        <div class="form-group"><label>Email</label><input type="email" id="cEmail"
+                                class="form-control"></div>
+                    </div>
+                    <div class="form-group"><label>Address</label><textarea id="cAddress" class="form-control"
+                            rows="2"></textarea></div>
+                    <button type="submit" class="btn btn-primary btn-block"><i class="bi bi-check-lg"></i> Save
+                        Customer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer History Modal -->
+    <div class="modal-overlay" id="customerHistoryModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h2><i class="bi bi-clock-history"></i> Purchase History</h2>
+                <button class="modal-close" onclick="closeModal('customerHistoryModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="customerHistoryContent"></div>
+        </div>
+    </div>
+
+    <!-- Purchase Order Modal -->
+    <div class="modal-overlay" id="addPOModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h2><i class="bi bi-cart-plus"></i> New Purchase Order</h2>
+                <button class="modal-close" onclick="closeModal('addPOModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group"><label>Supplier *</label><select id="poSupplier" class="form-control"
+                            required></select></div>
+                    <div class="form-group"><label>Expected Delivery</label><input type="date" id="poExpectedDate"
+                            class="form-control"></div>
+                </div>
+                <table class="st-table" style="margin-bottom:16px;">
+                    <thead>
+                        <tr>
+                            <th>Product Name</th>
+                            <th>Qty</th>
+                            <th>Cost (₹)</th>
+                            <th>Total</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="poItemsBody"></tbody>
+                </table>
+                <button class="btn btn-secondary" onclick="addPOItem()" style="margin-bottom:16px;"><i
+                        class="bi bi-plus"></i> Add Item</button>
+                <div class="form-group"><label>Notes</label><textarea id="poNotes" class="form-control"
+                        rows="2"></textarea></div>
+                <p style="text-align:right;font-size:18px;font-weight:700;">Total: <span id="poTotal">₹0</span></p>
+                <button class="btn btn-primary btn-block" onclick="createPO()"><i class="bi bi-check-circle"></i> Create
+                    Purchase Order</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Return Modal -->
+    <div class="modal-overlay" id="addReturnModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2><i class="bi bi-arrow-return-left"></i> Process Return</h2>
+                <button class="modal-close" onclick="closeModal('addReturnModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group"><label>Invoice Number *</label><input type="text" id="retInvoice"
+                        class="form-control" placeholder="e.g. INV-2026-1001"
+                        oninput="lookupInvoiceForReturn(this.value)"></div>
+                <div id="retInvoiceDetails" style="display:none;"></div>
+                <div class="form-group"><label>Reason *</label>
+                    <select id="retReason" class="form-control">
+                        <option>Defective product</option>
+                        <option>Wrong item delivered</option>
+                        <option>Customer changed mind</option>
+                        <option>Damaged in transit</option>
+                        <option>Expired product</option>
+                        <option>Other</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>Additional Notes</label><textarea id="retNotes" class="form-control"
+                        rows="2"></textarea></div>
+                <button class="btn btn-primary btn-block" onclick="processReturn()"><i class="bi bi-check-circle"></i>
+                    Process Return</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock Adjustment Modal -->
+    <div class="modal-overlay" id="adjustStockModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2><i class="bi bi-sliders2"></i> Adjust Stock</h2>
+                <button class="modal-close" onclick="closeModal('adjustStockModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group"><label>Product</label><select id="adjProduct" class="form-control"></select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Adjustment Type</label>
+                        <select id="adjType" class="form-control">
+                            <option value="add">Add Stock (+)</option>
+                            <option value="remove">Remove Stock (−)</option>
+                            <option value="Damage">Damage</option>
+                            <option value="Theft">Theft</option>
+                            <option value="Audit">Audit Correction</option>
+                            <option value="Transfer">Transfer</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Quantity</label><input type="number" id="adjQty" class="form-control"
+                            value="1" min="1"></div>
+                </div>
+                <div class="form-group"><label>Reason *</label><textarea id="adjReason" class="form-control" rows="2"
+                        required placeholder="Describe reason for adjustment..."></textarea></div>
+                <button class="btn btn-primary btn-block" onclick="processAdjustment()"><i
+                        class="bi bi-check-circle"></i> Submit Adjustment</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barcode Modal -->
+    <div class="modal-overlay" id="barcodeModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2><i class="bi bi-upc"></i> Product Barcode</h2>
+                <button class="modal-close" onclick="closeModal('barcodeModal')">&times;</button>
+            </div>
+            <div class="modal-body" style="text-align:center;">
+                <div id="barcodeProductInfo" style="margin-bottom:16px;"></div>
+                <svg id="barcodeDisplay"></svg>
+                <br>
+                <button class="btn btn-primary" onclick="printBarcode()" style="margin-top:16px;"><i
+                        class="bi bi-printer"></i> Print Label</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick POS Modal -->
+    <div class="modal-overlay" id="quickPOSModal">
+        <div class="modal modal-xl">
+            <div class="modal-header">
+                <h2><i class="bi bi-upc-scan"></i> Quick POS — Point of Sale</h2>
+                <button class="modal-close" onclick="closeModal('quickPOSModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="pos-layout">
+                    <div class="pos-left">
+                        <input type="text" id="posSearch" class="form-control" placeholder="Search or scan product..."
+                            oninput="posSearchProducts(this.value)" autofocus style="font-size:16px;padding:14px;">
+                        <div class="pos-product-grid" id="posProductGrid"></div>
+                    </div>
+                    <div class="pos-right">
+                        <div class="pos-cart-header">
+                            <h3><i class="bi bi-cart3"></i> Cart</h3><button class="btn btn-secondary btn-sm"
+                                onclick="clearPOSCart()">Clear</button>
+                        </div>
+                        <div class="pos-cart-items" id="posCartItems">
+                            <div class="empty-state" style="padding:20px;">
+                                <p>Add items to cart</p>
+                            </div>
+                        </div>
+                        <div class="pos-cart-summary">
+                            <div class="pos-summary-row"><span>Subtotal</span><span id="posSubtotal">₹0</span></div>
+                            <div class="pos-summary-row"><span>GST</span><span id="posGST">₹0</span></div>
+                            <div class="pos-summary-row"><span>Discount</span><input type="number" id="posDiscount"
+                                    value="0" min="0" style="width:80px;text-align:right;" oninput="updatePOSTotals()">
+                            </div>
+                            <div class="pos-summary-row total"><span>TOTAL</span><span id="posTotal">₹0</span></div>
+                        </div>
+                        <div class="pos-payment-row">
+                            <select id="posPayment" class="form-control">
+                                <option>Cash</option>
+                                <option>UPI</option>
+                                <option>Card</option>
+                            </select>
+                            <button class="btn btn-primary btn-block" onclick="completePOSSale()" style="flex:2;"><i
+                                    class="bi bi-check-circle-fill"></i> Checkout</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CSV Import Modal -->
+    <div class="modal-overlay" id="csvImportModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2><i class="bi bi-filetype-csv"></i> Import Products from CSV</h2>
+                <button class="modal-close" onclick="closeModal('csvImportModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="csv-info">
+                    <p>CSV must have headers: <code>Name, Category, Quantity, CostPrice, SellPrice, GST%, Unit</code>
+                    </p>
+                    <p style="font-size:13px;color:var(--text-muted);">Optional: SKU, ExpiryDate, MinStock, MaxStock,
+                        Warranty, Notes</p>
+                </div>
+                <label class="file-drop-zone" id="csvDropZone">
+                    <i class="bi bi-cloud-arrow-up" style="font-size:40px;"></i>
+                    <p>Drag & drop CSV file or click to browse</p>
+                    <input type="file" accept=".csv" onchange="previewCSV(event)" style="display:none;">
+                </label>
+                <div id="csvPreview" style="display:none;"></div>
+                <button class="btn btn-primary btn-block" id="csvImportBtn" onclick="importCSVProducts()"
+                    style="display:none;"><i class="bi bi-check-circle"></i> Import Products</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Discount Modal -->
+    <div class="modal-overlay" id="addDiscountModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2><i class="bi bi-tag"></i> Create Coupon</h2>
+                <button class="modal-close" onclick="closeModal('addDiscountModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="discountForm" onsubmit="event.preventDefault();saveDiscount()">
+                    <div class="form-row">
+                        <div class="form-group"><label>Coupon Code *</label><input type="text" id="discCode"
+                                class="form-control" required placeholder="e.g. SUMMER25"
+                                style="text-transform:uppercase;"></div>
+                        <div class="form-group"><label>Type</label>
+                            <select id="discType" class="form-control">
+                                <option value="percentage">Percentage (%)</option>
+                                <option value="fixed">Fixed Amount (₹)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Value</label><input type="number" id="discValue"
+                                class="form-control" value="10" min="1"></div>
+                        <div class="form-group"><label>Min Order (₹)</label><input type="number" id="discMinOrder"
+                                class="form-control" value="500"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Max Discount (₹)</label><input type="number" id="discMaxDiscount"
+                                class="form-control" value="1000"></div>
+                        <div class="form-group"><label>Usage Limit</label><input type="number" id="discUsageLimit"
+                                class="form-control" value="100"></div>
+                    </div>
+                    <div class="form-group"><label>Description</label><input type="text" id="discDescription"
+                            class="form-control" placeholder="Short description for this coupon"></div>
+                    <div class="form-group"><label>Expiry Date</label><input type="date" id="discExpiry"
+                            class="form-control"></div>
+                    <button type="submit" class="btn btn-primary btn-block"><i class="bi bi-check-lg"></i> Create
+                        Coupon</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Toast -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="js/supabase-config.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/modules.js"></script>
+    <script src="js/features.js"></script>
+    <script src="js/operations.js"></script>
+    <script src="js/pos.js"></script>
+</body>
+
+</html>
