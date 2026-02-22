@@ -55,10 +55,19 @@ function syncToSupabase(localKey) {
         });
 }
 
+// Clear ONLY data keys (preserve auth/session) before loading new user data
+function clearDataCache() {
+    Object.keys(SYNC_KEYS).forEach(key => DB.remove(key));
+    DB.remove('seeded');
+}
+
 // Load all data from Supabase into localStorage
 async function loadFromSupabase() {
     const userId = getCurrentUserId();
     if (!userId) return false;
+
+    // CRITICAL: Clear old cached data FIRST to prevent data leaking between users
+    clearDataCache();
 
     const { data, error } = await supabaseClient
         .from('store_data')
@@ -68,12 +77,24 @@ async function loadFromSupabase() {
 
     if (error) {
         console.error('Failed to load data from Supabase:', error.message);
-        // If no row exists yet, create one
+        // If no row exists yet (new user), create one and init empty data
         if (error.code === 'PGRST116') {
             const { error: insertErr } = await supabaseClient
                 .from('store_data')
                 .insert({ user_id: userId });
             if (insertErr) console.error('Failed to create store_data row:', insertErr.message);
+            // Initialize all keys to empty so seedData() runs fresh for this new user
+            DB.set('products', []);
+            DB.set('sales', []);
+            DB.set('suppliers', []);
+            DB.set('customers', []);
+            DB.set('purchaseOrders', []);
+            DB.set('returns', []);
+            DB.set('adjustments', []);
+            DB.set('discounts', []);
+            DB.set('activities', []);
+            DB.set('settings', {});
+            DB.set('seeded', false);
         }
         return false;
     }
