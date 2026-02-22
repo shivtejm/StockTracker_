@@ -38,7 +38,7 @@ const SYNC_KEYS = {
     settings: 'settings',
 };
 
-// Push a single key to Supabase (fire-and-forget)
+// Push a single key to Supabase (fire-and-forget) using UPSERT
 function syncToSupabase(localKey) {
     const colName = SYNC_KEYS[localKey];
     if (!colName) return;
@@ -48,8 +48,7 @@ function syncToSupabase(localKey) {
 
     supabaseClient
         .from('store_data')
-        .update({ [colName]: data, updated_at: new Date().toISOString() })
-        .eq('user_id', userId)
+        .upsert({ user_id: userId, [colName]: data, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
         .then(({ error }) => {
             if (error) console.error('Supabase sync error (' + localKey + '):', error.message);
         });
@@ -77,12 +76,12 @@ async function loadFromSupabase() {
 
     if (error) {
         console.error('Failed to load data from Supabase:', error.message);
-        // If no row exists yet (new user), create one and init empty data
+        // If no row exists yet (new user), create one using upsert and init empty data
         if (error.code === 'PGRST116') {
-            const { error: insertErr } = await supabaseClient
+            const { error: upsertErr } = await supabaseClient
                 .from('store_data')
-                .insert({ user_id: userId });
-            if (insertErr) console.error('Failed to create store_data row:', insertErr.message);
+                .upsert({ user_id: userId }, { onConflict: 'user_id' });
+            if (upsertErr) console.error('Failed to create store_data row:', upsertErr.message);
             // Initialize all keys to empty so seedData() runs fresh for this new user
             DB.set('products', []);
             DB.set('sales', []);
@@ -117,12 +116,13 @@ async function loadFromSupabase() {
     return false;
 }
 
-// Push ALL data to Supabase (used after seeding)
+// Push ALL data to Supabase (used after seeding) using UPSERT
 async function syncAllToSupabase() {
     const userId = getCurrentUserId();
     if (!userId) return;
 
-    const updateData = {
+    const upsertData = {
+        user_id: userId,
         products: DB.get('products') || [],
         sales: DB.get('sales') || [],
         suppliers: DB.get('suppliers') || [],
@@ -139,8 +139,7 @@ async function syncAllToSupabase() {
 
     const { error } = await supabaseClient
         .from('store_data')
-        .update(updateData)
-        .eq('user_id', userId);
+        .upsert(upsertData, { onConflict: 'user_id' });
 
     if (error) console.error('Failed to sync all data:', error.message);
 }

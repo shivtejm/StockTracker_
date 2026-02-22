@@ -40,12 +40,15 @@ async function handleLogin(e) {
             return;
         }
 
+        // Clear any previous user's cached data before loading new user
+        clearLocalData();
+
         // Store session and user info
         DB.set('supabase_session', data.session);
         DB.set('auth', true);
         DB.set('user', data.user.email.split('@')[0]);
 
-        // Load data from Supabase
+        // Load data from Supabase for THIS user
         await loadFromSupabase();
         showApp();
     } catch (err) {
@@ -94,6 +97,9 @@ async function handleRegister(e) {
 
         // If session exists, auto-login directly to the app
         if (data.session) {
+            // Clear any previous user's cached data
+            clearLocalData();
+
             DB.set('supabase_session', data.session);
             DB.set('auth', true);
             DB.set('user', data.user.email.split('@')[0]);
@@ -159,6 +165,8 @@ window.onload = async function () {
     // Check for existing Supabase session
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) {
+        // Clear stale data, then load fresh from Supabase
+        clearDataCache();
         DB.set('supabase_session', session);
         DB.set('auth', true);
         DB.set('user', session.user.email.split('@')[0]);
